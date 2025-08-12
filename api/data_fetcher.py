@@ -6,9 +6,9 @@ import pandas as pd
 
 def get_fpl_player_data():
     """
-    Fetches all FPL player data.
+    Fetches all FPL player data and populates the database.
     """
-    async def fetch_data():
+    async def fetch_and_populate():
         async with aiohttp.ClientSession() as session:
             fpl = FPL(session)
             players = await fpl.get_players()
