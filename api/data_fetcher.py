@@ -12,7 +12,8 @@ def get_fpl_player_data():
         async with aiohttp.ClientSession() as session:
             fpl = FPL(session)
             players = await fpl.get_players()
-            return players
+            teams = await fpl.get_teams()
+            return players, teams
 
     return asyncio.run(fetch_data())
 
