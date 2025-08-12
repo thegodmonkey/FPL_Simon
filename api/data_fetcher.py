@@ -1,7 +1,8 @@
 import asyncio
 import aiohttp
 from fpl import FPL
-from api.database import init_db, populate_teams_and_players
+import soccerdata as sd
+import pandas as pd
 
 def get_fpl_player_data():
     """
@@ -12,11 +13,14 @@ def get_fpl_player_data():
             fpl = FPL(session)
             players = await fpl.get_players()
             teams = await fpl.get_teams()
+            return players, teams
 
-            # Populate database
-            init_db()
-            populate_teams_and_players(players, teams)
+    return asyncio.run(fetch_data())
 
-            return players
-
-    return asyncio.run(fetch_and_populate())
+def get_fbref_stats(season: str) -> pd.DataFrame:
+    """
+    Fetches player season stats from FBref.
+    """
+    fbref = sd.FBref(leagues="ENG-Premier League", seasons=season)
+    df = fbref.read_player_season_stats()
+    return df
