@@ -1,3 +1,4 @@
 fpl
+pandas
 requests
 pandas
