@@ -1,2 +1,4 @@
 fpl
+pandas
 requests
+soccerdata
