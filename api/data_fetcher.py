@@ -4,15 +4,15 @@ from fpl import FPL
 import soccerdata as sd
 import pandas as pd
 
-def get_fpl_player_data():
+def get_fpl_data():
     """
-    Fetches all FPL player data and populates the database.
+    Fetches all FPL player and team data.
     """
-    async def fetch_and_populate():
+    async def fetch_data():
         async with aiohttp.ClientSession() as session:
             fpl = FPL(session)
-            players = await fpl.get_players()
-            teams = await fpl.get_teams()
+            players = await fpl.get_players(return_json=True)
+            teams = await fpl.get_teams(return_json=True)
             return players, teams
 
     return asyncio.run(fetch_data())

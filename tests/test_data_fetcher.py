@@ -1,13 +1,13 @@
 import pandas as pd
 import pytest
-from api.data_fetcher import get_fbref_stats, get_fpl_player_data
+from api.data_fetcher import get_fbref_stats, get_fpl_data
 
-def test_get_fpl_player_data():
+def test_get_fpl_data():
     """
-    Tests the get_fpl_player_data function.
+    Tests the get_fpl_data function.
     """
     # When
-    players, teams = get_fpl_player_data()
+    players, teams = get_fpl_data()
 
     # Then
     assert isinstance(players, list)
