@@ -45,7 +45,7 @@ def populate_teams_and_players(players_data, teams_data):
     cursor = conn.cursor()
 
     # --- Teams Population ---
-    teams_df = pd.DataFrame([team.__dict__ for team in teams_data])
+    teams_df = pd.DataFrame(teams_data)
     teams_df = teams_df[['id', 'name', 'code']]
     teams_df = teams_df.rename(columns={'id': 'team_id', 'name': 'team_name', 'code': 'fpl_team_code'})
     teams_to_insert = teams_df.to_dict(orient='records')
@@ -55,7 +55,7 @@ def populate_teams_and_players(players_data, teams_data):
     )
 
     # --- Players Population ---
-    players_df = pd.DataFrame([player.__dict__ for player in players_data])
+    players_df = pd.DataFrame(players_data)
     # Create full_name
     players_df['full_name'] = players_df['first_name'] + ' ' + players_df['second_name']
 
