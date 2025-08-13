@@ -20,10 +20,8 @@ def test_get_players(client, mocker):
 
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
-    mock_cursor.fetchall.return_value = [dict(row) for row in mock_player_data]
-    mock_conn.cursor.return_value = mock_cursor
-    # The original app code returns a list of sqlite3.Row objects, which act like dicts.
-    # The json conversion is `[dict(player) for player in players]`.
+    # The app returns a list of `sqlite3.Row` objects.
+    # Mocking with a list of dicts is the easiest way to simulate this.
     # `fetchall` should return a list of objects that can be converted to dicts.
     # A list of dicts is the easiest way to mock this.
 
