@@ -2,30 +2,16 @@ import pytest
 import sqlite3
 from api.database import init_db, populate_teams_and_players
 
-# Mock data mimicking the FPL API structure
-class MockTeam:
-    def __init__(self, id, name, code):
-        self.id = id
-        self.name = name
-        self.code = code
-
-class MockPlayer:
-    def __init__(self, id, first_name, second_name, element_type, team):
-        self.id = id
-        self.first_name = first_name
-        self.second_name = second_name
-        self.element_type = element_type
-        self.team = team
-
+# Mock data mimicking the FPL API structure (as dictionaries)
 mock_teams_data = [
-    MockTeam(id=1, name='Arsenal', code=3),
-    MockTeam(id=2, name='Aston Villa', code=7),
+    {'id': 1, 'name': 'Arsenal', 'code': 3},
+    {'id': 2, 'name': 'Aston Villa', 'code': 7},
 ]
 
 mock_players_data = [
-    MockPlayer(id=1, first_name='Bukayo', second_name='Saka', element_type=3, team=1),
-    MockPlayer(id=2, first_name='Ollie', second_name='Watkins', element_type=4, team=2),
-    MockPlayer(id=3, first_name='Gabriel', second_name='Magalhães', element_type=2, team=1),
+    {'id': 1, 'first_name': 'Bukayo', 'second_name': 'Saka', 'element_type': 3, 'team': 1},
+    {'id': 2, 'first_name': 'Ollie', 'second_name': 'Watkins', 'element_type': 4, 'team': 2},
+    {'id': 3, 'first_name': 'Gabriel', 'second_name': 'Magalhães', 'element_type': 2, 'team': 1},
 ]
 
 def test_populate_database(monkeypatch, tmp_path):
