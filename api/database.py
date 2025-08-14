@@ -37,6 +37,14 @@ def init_db():
     conn.commit()
     conn.close()
 
+def populate_fbref_stats(stats_dataframe: pd.DataFrame):
+    """
+    Populates the player_stats_fbref table with stats from FBref.
+    """
+    conn = get_db_connection()
+    stats_dataframe.to_sql('player_stats_fbref', conn, if_exists='replace', index=False)
+    conn.close()
+
 def populate_teams_and_players(players_data, teams_data):
     """
     Populates the teams and players tables from the FPL player data, mapping to the new schema.
