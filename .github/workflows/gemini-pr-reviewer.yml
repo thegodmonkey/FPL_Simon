@@ -40,7 +40,13 @@ jobs:
   review-pr:
     if: |-
       github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'pull_request' ||
+      (
+        github.event_name == 'pull_request' &&
+        (
+          github.event.repository.private == true ||
+          contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR", "CONTRIBUTOR"]'), github.event.pull_request.author_association)
+        )
+      ) ||
       (
         (
           (
