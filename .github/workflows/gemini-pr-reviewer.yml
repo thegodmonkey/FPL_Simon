@@ -25,7 +25,11 @@ jobs:
           git fetch origin ${{ github.event.pull_request.base.ref }}
           # The `|| true` prevents the workflow from failing if there are no changes
           git diff --no-color origin/${{ github.event.pull_request.base.ref }} > diff.txt || true
-          echo "diff_output=$(cat diff.txt)" >> "$GITHUB_OUTPUT"
+          {
+            echo 'diff_output<<EOF'
+            cat diff.txt
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
       # Step 3: Run Gemini CLI with the diff as input
       - name: 'Run Gemini Review'
