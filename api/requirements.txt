@@ -3,3 +3,4 @@ fpl
 pandas
 requests
 soccerdata
+google-generativeai
