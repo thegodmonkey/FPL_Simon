@@ -1,8 +1,7 @@
 def get_llm_insight(prompt: str, context: str):
-    """
-    Placeholder for LLM insight generation.
-    """
-    Generates insights from a Large Language Model (LLM) based on a given prompt and context.
+    """Generates insights from a Large Language Model (LLM) based on a given prompt and context.
+
+    This is a placeholder for LLM insight generation.
 
     Args:
         prompt: The prompt to send to the LLM.
