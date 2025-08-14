@@ -38,16 +38,13 @@ permissions:
 
 jobs:
   review-pr:
-    # This condition seeks to ensure the action is only run when it is triggered by a trusted user.
-    # For private repos, users who have access to the repo are considered trusted.
-    # For public repos, users who members, owners, or collaborators are considered trusted.
     if: |-
       github.event_name == 'workflow_dispatch' ||
       (
         github.event_name == 'pull_request' &&
         (
           github.event.repository.private == true ||
-          contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association)
+          contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR", "CONTRIBUTOR"]'), github.event.pull_request.author_association)
         )
       ) ||
       (
