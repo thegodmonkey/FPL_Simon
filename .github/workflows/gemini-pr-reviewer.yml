@@ -75,5 +75,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `### 🤖 Gemini PR Review\n\n${{ steps.gemini.outputs.text }}`
+              body: `### 🤖 Gemini PR Review\n\n${{ steps.gemini.outputs.summary }}`
             })
