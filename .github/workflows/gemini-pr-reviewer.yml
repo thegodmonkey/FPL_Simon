@@ -3,6 +3,8 @@ name: 'Gemini PR Reviewer'
 on:
   pull_request:
     types: [opened, synchronize]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: 'read'
@@ -10,6 +12,7 @@ permissions:
 
 jobs:
   review-pr:
+    if: github.event_name == 'pull_request' || (github.event.issue.pull_request && contains(github.event.comment.body, '@gemini-cli /review'))
     runs-on: 'ubuntu-latest'
     steps:
       # Step 1: Check out the code from the PR branch
@@ -17,14 +20,29 @@ jobs:
         with:
           fetch-depth: 0 # Fetches full history to allow diffing
 
-      # Step 2: Calculate the difference between the PR branch and the base branch
-      - name: 'Calculate diff'
-        id: 'diff'
+      # Step 2a: Calculate diff on pull_request event
+      - name: 'Calculate diff on pull_request'
+        id: 'diff_pr'
+        if: github.event_name == 'pull_request'
         run: |
-          # The target branch is available in the event payload
           git fetch origin ${{ github.event.pull_request.base.ref }}
-          # The `|| true` prevents the workflow from failing if there are no changes
           git diff --no-color origin/${{ github.event.pull_request.base.ref }} > diff.txt || true
+          {
+            echo 'diff_output<<EOF'
+            cat diff.txt
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      # Step 2b: Calculate diff on issue_comment event
+      - name: 'Calculate diff on comment'
+        id: 'diff_comment'
+        if: github.event_name == 'issue_comment'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BASE_REF=$(gh pr view ${{ github.event.issue.number }} --json baseRefName -q .baseRefName)
+          git fetch origin $BASE_REF
+          git diff --no-color origin/$BASE_REF > diff.txt || true
           {
             echo 'diff_output<<EOF'
             cat diff.txt
@@ -45,7 +63,7 @@ jobs:
 
             Here is the diff of the changes:
             ```diff
-            ${{ steps.diff.outputs.diff_output }}
+            ${{ steps.diff_pr.outputs.diff_output || steps.diff_comment.outputs.diff_output }}
             ```
 
       # Step 4: Post the review as a comment on the PR
