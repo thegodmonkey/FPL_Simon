@@ -26,7 +26,8 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           git fetch origin ${{ github.event.pull_request.base.ref }}
-          git diff --no-color origin/${{ github.event.pull_request.base.ref }} > diff.txt || true
+          git fetch origin ${{ github.event.pull_request.head.ref }}
+          git diff --no-color origin/${{ github.event.pull_request.base.ref }}...origin/${{ github.event.pull_request.head.ref }} > diff.txt || true
           {
             echo 'diff_output<<EOF'
             cat diff.txt
@@ -41,8 +42,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BASE_REF=$(gh pr view ${{ github.event.issue.number }} --json baseRefName -q .baseRefName)
+          HEAD_REF=$(gh pr view ${{ github.event.issue.number }} --json headRefName -q .headRefName)
           git fetch origin $BASE_REF
-          git diff --no-color origin/$BASE_REF > diff.txt || true
+          git fetch origin $HEAD_REF
+          git diff --no-color origin/$BASE_REF...origin/$HEAD_REF > diff.txt || true
           {
             echo 'diff_output<<EOF'
             cat diff.txt
