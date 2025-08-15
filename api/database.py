@@ -34,6 +34,48 @@ def init_db():
         )
     ''')
 
+    # Create fbref player stats table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS player_stats_fbref (
+            stat_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id INTEGER,
+            nation TEXT,
+            pos TEXT,
+            age INTEGER,
+            born INTEGER,
+            playing_time_mp INTEGER,
+            playing_time_starts INTEGER,
+            playing_time_min INTEGER,
+            playing_time_90s REAL,
+            performance_gls INTEGER,
+            performance_ast INTEGER,
+            performance_g_a INTEGER,
+            performance_g_pk INTEGER,
+            performance_pk INTEGER,
+            performance_pkatt INTEGER,
+            performance_crdy INTEGER,
+            performance_crdr INTEGER,
+            expected_xg REAL,
+            expected_npxg REAL,
+            expected_xag REAL,
+            expected_npxg_xag REAL,
+            progression_prgc REAL,
+            progression_prgp REAL,
+            progression_prgr REAL,
+            per_90_minutes_gls REAL,
+            per_90_minutes_ast REAL,
+            per_90_minutes_g_a REAL,
+            per_90_minutes_g_pk REAL,
+            per_90_minutes_g_a_pk REAL,
+            per_90_minutes_xg REAL,
+            per_90_minutes_xag REAL,
+            per_90_minutes_xg_xag REAL,
+            per_90_minutes_npxg REAL,
+            per_90_minutes_npxg_xag REAL,
+            FOREIGN KEY (player_id) REFERENCES players (player_id)
+        )
+    ''')
+
     conn.commit()
     conn.close()
 

@@ -17,5 +17,19 @@ def get_players():
         if conn:
             conn.close()
 
+@app.route('/api/stats/<int:player_id>')
+def get_player_stats(player_id):
+    conn = get_db_connection()
+    try:
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM player_stats_fbref WHERE player_id = ?', (player_id,))
+            stats = cursor.fetchall()
+
+        return jsonify([dict(row) for row in stats])
+    finally:
+        if conn:
+            conn.close()
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True, use_reloader=False)
