@@ -99,11 +99,17 @@ def populate_fbref_stats(stats_dataframe: pd.DataFrame):
     except Exception as e:
         print(f"An error occurred during database population: {e}")
         conn.rollback()
-    finally:
+            method=lambda table, connection, keys, data_iter: connection.executemany(
+                'INSERT OR REPLACE INTO "' + table.name + '" (' + ",".join(f"`{k}`" for k in keys) + ') VALUES (' + ",".join(["?"] * len(keys)) + ')',
+                data_iter
+            )
         conn.close()
 
 def populate_teams_and_players(players_data, teams_data):
-    """
+    except Exception as e:
+        import logging
+        logging.error(f"An error occurred during database population: {e}")
+        conn.rollback()
     Populates the teams and players tables from the FPL player data, mapping to the new schema.
     """
     conn = get_db_connection()
