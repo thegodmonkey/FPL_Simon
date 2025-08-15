@@ -201,7 +201,10 @@ def populate_fbref_stats(stats_dataframe):
     conn.close()
 
 def populate_teams_and_players(players_data, teams_data):
-    """
+    except Exception as e:
+        import logging
+        logging.error(f"An error occurred during database population: {e}")
+        conn.rollback()
     Populates the teams and players tables from the FPL player data, mapping to the new schema.
     """
     conn = get_db_connection()
