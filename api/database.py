@@ -38,158 +38,45 @@ def create_database_tables():
     # Create player_stats_fbref table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS player_stats_fbref (
-            player_id INTEGER,
-            season TEXT,
-            minutes_per_90 REAL,
-            xg_per_90 REAL,
-            xa_per_90 REAL,
-            goals INTEGER,
-            assists INTEGER,
-            g_minus_pk REAL,
-            pk INTEGER,
-            pk_att INTEGER,
-            crdy INTEGER,
-            crdr INTEGER,
-            sh INTEGER,
-            sot INTEGER,
-            sot_percent REAL,
-            sh_per_90 REAL,
-            sot_per_90 REAL,
-            g_per_sh REAL,
-            g_per_sot REAL,
-            dist REAL,
-            fk INTEGER,
-            npxg REAL,
-            cmp INTEGER,
-            att_pass INTEGER,
-            cmp_percent REAL,
-            tot_dist INTEGER,
-            prg_dist INTEGER,
-            cmp_short INTEGER,
-            att_short INTEGER,
-            cmp_percent_short REAL,
-            cmp_medium INTEGER,
-            att_medium INTEGER,
-            cmp_percent_medium REAL,
-            cmp_long INTEGER,
-            att_long INTEGER,
-            cmp_percent_long REAL,
-            ast INTEGER,
-            xa REAL,
-            a_minus_xa REAL,
-            kp INTEGER,
-            one_third INTEGER,
-            ppa INTEGER,
-            crspa INTEGER,
-            prog_pass INTEGER,
-            sca INTEGER,
-            sca90 REAL,
-            gca INTEGER,
-            gca90 REAL,
-            tkl INTEGER,
-            tklw INTEGER,
-            def_3rd_tkl INTEGER,
-            mid_3rd_tkl INTEGER,
-            att_3rd_tkl INTEGER,
-            tkl_vs_dribblers INTEGER,
-            att_vs_dribblers INTEGER,
-            tkl_percent_vs_dribblers REAL,
-            past_dribbled INTEGER,
-            blocks INTEGER,
-            sh_blocked INTEGER,
-            pass_blocked INTEGER,
-            interceptions INTEGER,
-            tkl_plus_int INTEGER,
-            clr INTEGER,
-            err INTEGER,
-            touches INTEGER,
-            def_pen_touches INTEGER,
-            def_3rd_touches INTEGER,
-            mid_3rd_touches INTEGER,
-            att_3rd_touches INTEGER,
-            att_pen_touches INTEGER,
-            live_touches INTEGER,
-            succ_dribbles INTEGER,
-            att_dribbles INTEGER,
-            succ_percent_dribbles REAL,
-            num_pl_dribbled_past INTEGER,
-            megs INTEGER,
-            carries INTEGER,
-            tot_dist_carries INTEGER,
-            prg_dist_carries INTEGER,
-            prog_carries INTEGER,
-            one_third_carries INTEGER,
-            cpa_carries INTEGER,
-            mis_carries INTEGER,
-            dis_carries INTEGER,
-            rec_passes INTEGER,
-            prog_rec_passes INTEGER,
-            crdy_misc INTEGER,
-            crdr_misc INTEGER,
-            two_crdy INTEGER,
-            fld INTEGER,
-            fls INTEGER,
-            off INTEGER,
-            crs INTEGER,
-            int_misc INTEGER,
-            tklw_misc INTEGER,
-            pkwon INTEGER,
-            pkcon INTEGER,
-            og INTEGER,
-            recov INTEGER,
-            FOREIGN KEY (player_id) REFERENCES players (player_id),
-            PRIMARY KEY (player_id, season)
+            league TEXT, season TEXT, team TEXT, player TEXT, nation TEXT, pos TEXT, age REAL, born REAL,
+            "Playing Time_MP" REAL, "Playing Time_Starts" REAL, "Playing Time_Min" REAL, "Playing Time_90s" REAL,
+            "Performance_Gls" REAL, "Performance_Ast" REAL, "Performance_G+A" REAL, "Performance_G-PK" REAL,
+            "Performance_PK" REAL, "Performance_PKatt" REAL, "Performance_CrdY" REAL, "Performance_CrdR" REAL,
+            "Expected_xG" REAL, "Expected_npxG" REAL, "Expected_xAG" REAL, "Expected_npxG+xAG" REAL,
+            "Progression_PrgC" REAL, "Progression_PrgP" REAL, "Progression_PrgR" REAL,
+            "Per 90 Minutes_Gls" REAL, "Per 90 Minutes_Ast" REAL, "Per 90 Minutes_G+A" REAL,
+            "Per 90 Minutes_G-PK" REAL, "Per 90 Minutes_G+A-PK" REAL, "Per 90 Minutes_xG" REAL,
+            "Per 90 Minutes_xAG" REAL, "Per 90 Minutes_xG+xAG" REAL, "Per 90 Minutes_npxG" REAL,
+            "Per 90 Minutes_npxG+xAG" REAL,
+            PRIMARY KEY (league, season, team, player)
         )
     ''')
 
     conn.commit()
     conn.close()
 
-def populate_fbref_stats(stats_dataframe):
+def populate_fbref_stats(stats_dataframe: pd.DataFrame):
     """
     Populates the player_stats_fbref table from a DataFrame.
     """
     conn = get_db_connection()
 
-    # A comprehensive mapping from potential DataFrame column names to sanitized DB column names
-    column_mapping = {
-        'G-PK': 'g_minus_pk', 'PKatt': 'pk_att', 'CrdY': 'crdy', 'CrdR': 'crdr',
-        'Sh': 'sh', 'SoT': 'sot', 'SoT%': 'sot_percent', 'Sh/90': 'sh_per_90',
-        'SoT/90': 'sot_per_90', 'G/Sh': 'g_per_sh', 'G/SoT': 'g_per_sot',
-        'Dist': 'dist', 'FK': 'fk', 'npxG': 'npxg', 'Cmp': 'cmp', 'Att': 'att_pass',
-        'Cmp%': 'cmp_percent', 'TotDist': 'tot_dist', 'PrgDist': 'prg_dist',
-        'Cmp (Short)': 'cmp_short', 'Att (Short)': 'att_short', 'Cmp% (Short)': 'cmp_percent_short',
-        'Cmp (Medium)': 'cmp_medium', 'Att (Medium)': 'att_medium', 'Cmp% (Medium)': 'cmp_percent_medium',
-        'Cmp (Long)': 'cmp_long', 'Att (Long)': 'att_long', 'Cmp% (Long)': 'cmp_percent_long',
-        'Ast': 'ast', 'xA': 'xa', 'A-xA': 'a_minus_xa', 'KP': 'kp', '1/3': 'one_third',
-        'PPA': 'ppa', 'CrsPA': 'crspa', 'Prog': 'prog_pass', 'SCA': 'sca', 'SCA90': 'sca90',
-        'GCA': 'gca', 'GCA90': 'gca90', 'Tkl': 'tkl', 'TklW': 'tklw', 'Def 3rd': 'def_3rd_tkl',
-        'Mid 3rd': 'mid_3rd_tkl', 'Att 3rd': 'att_3rd_tkl', 'Tkl (vs Dribblers)': 'tkl_vs_dribblers',
-        'Att (vs Dribblers)': 'att_vs_dribblers', 'Tkl% (vs Dribblers)': 'tkl_percent_vs_dribblers',
-        'Past': 'past_dribbled', 'Blocks': 'blocks', 'Sh Blocked': 'sh_blocked',
-        'Pass Blocked': 'pass_blocked', 'Int': 'interceptions', 'Tkl+Int': 'tkl_plus_int',
-        'Clr': 'clr', 'Err': 'err', 'Touches': 'touches', 'Def Pen': 'def_pen_touches',
-        'Def 3rd Touches': 'def_3rd_touches', 'Mid 3rd Touches': 'mid_3rd_touches',
-        'Att 3rd Touches': 'att_3rd_touches', 'Att Pen': 'att_pen_touches', 'Live': 'live_touches',
-        'Succ': 'succ_dribbles', 'Att (Dribbles)': 'att_dribbles', 'Succ%': 'succ_percent_dribbles',
-        '#Pl': 'num_pl_dribbled_past', 'Megs': 'megs', 'Carries': 'carries',
-        'TotDist (Carries)': 'tot_dist_carries', 'PrgDist (Carries)': 'prg_dist_carries',
-        'Prog (Carries)': 'prog_carries', '1/3 (Carries)': 'one_third_carries',
-        'CPA (Carries)': 'cpa_carries', 'Mis (Carries)': 'mis_carries',
-        'Dis (Carries)': 'dis_carries', 'Rec': 'rec_passes', 'Prog (Rec)': 'prog_rec_passes',
-        '2CrdY': 'two_crdy', 'Fld': 'fld', 'Fls': 'fls', 'Off': 'off', 'Crs': 'crs',
-        'PKwon': 'pkwon', 'PKcon': 'pkcon', 'OG': 'og', 'Recov': 'recov',
-        # Adding some variations observed in data sources
-        'Passes Cmp': 'cmp', 'Passes Att': 'att_pass', 'Passes Cmp%': 'cmp_percent',
-        'Tackles TklW': 'tklw', 'Dribbles Succ': 'succ_dribbles', 'Dribbles Att': 'att_dribbles',
-        'Goals': 'goals', 'Assists': 'assists', 'xG': 'xg_per_90', 'xAG': 'xa_per_90'
-    }
-    stats_dataframe.rename(columns=column_mapping, inplace=True)
+    # The soccerdata library returns a DataFrame with a multi-level index.
+    # We reset it so that 'league', 'season', 'team', and 'player' become columns.
+    stats_dataframe.reset_index(inplace=True)
+
+    # Flatten the MultiIndex columns, e.g., ('Performance', 'Gls') becomes 'Performance_Gls'
+    # We also strip leading/trailing underscores that might result from empty names in the MultiIndex.
+    if isinstance(stats_dataframe.columns, pd.MultiIndex):
+        stats_dataframe.columns = ['_'.join(col).strip('_') for col in stats_dataframe.columns.values]
 
     cursor = conn.cursor()
+    # Use PRAGMA to get the columns of the target table
     cursor.execute("PRAGMA table_info(player_stats_fbref)")
     table_columns = {info[1] for info in cursor.fetchall()}
 
+    # Filter the DataFrame to only include columns that exist in the database table
+    # This is a defensive measure to avoid errors if the source data changes.
     df_filtered = stats_dataframe[[col for col in stats_dataframe.columns if col in table_columns]]
 
     # Use a transaction for the insert/update operation
