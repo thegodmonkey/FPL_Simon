@@ -19,12 +19,6 @@ def main():
     populate_teams_and_players(players_data, teams_data)
     print("Database populated with FPL data successfully.")
 
-    season = "2024-2025" # Or get from config/args
-    print(f"Fetching FBref stats data for the {season} season...")
-    stats_df = get_fbref_stats(season=season)
-    stats_df = get_fbref_stats(season='2024-2025')
-    print("FBref data fetched.")
-
     print("Populating the database with FBref stats data...")
     populate_fbref_stats(stats_df)
     print("Database populated with FBref stats successfully.")
