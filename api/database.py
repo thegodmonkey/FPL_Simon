@@ -1,5 +1,6 @@
 import sqlite3
 import pandas as pd
+import logging
 
 DATABASE_FILE = 'fpl.db'
 
@@ -191,20 +192,33 @@ def populate_fbref_stats(stats_dataframe):
 
     df_filtered = stats_dataframe[[col for col in stats_dataframe.columns if col in table_columns]]
 
-    df_filtered.to_sql(
-        'player_stats_fbref',
-        conn,
-        if_exists='append',
-        index=False
-    )
+    # Use a transaction for the insert/update operation
+    try:
+        # Since we have a primary key on (league, season, team, player),
+        # we can use INSERT OR REPLACE to handle duplicates.
+        def insert_or_replace(table, connection, keys, data_iter):
+            sql = f'INSERT OR REPLACE INTO "{table.name}" ({",".join(f"`{k}`" for k in keys)}) VALUES ({",".join(["?"] * len(keys))})'
+            connection.executemany(sql, data_iter)
 
-    conn.close()
-
-def populate_teams_and_players(players_data, teams_data):
+        df_filtered.to_sql(
+            'player_stats_fbref',
+            conn,
+            if_exists='append',
+            index=False,
+            chunksize=1000,
+            method=insert_or_replace
+        )
+        
+        conn.commit()
     except Exception as e:
-        import logging
         logging.error(f"An error occurred during database population: {e}")
         conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+def populate_teams_and_players(players_data, teams_data):
+    """
     Populates the teams and players tables from the FPL player data, mapping to the new schema.
     """
     conn = get_db_connection()
