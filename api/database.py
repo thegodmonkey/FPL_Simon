@@ -1,5 +1,6 @@
 import sqlite3
 import pandas as pd
+import logging
 
 DATABASE_FILE = 'fpl.db'
 
@@ -82,34 +83,29 @@ def populate_fbref_stats(stats_dataframe: pd.DataFrame):
     try:
         # Since we have a primary key on (league, season, team, player),
         # we can use INSERT OR REPLACE to handle duplicates.
-        # This will insert new rows or replace existing ones if the primary key matches.
+        def insert_or_replace(table, connection, keys, data_iter):
+            sql = f'INSERT OR REPLACE INTO "{table.name}" ({",".join(f"`{k}`" for k in keys)}) VALUES ({",".join(["?"] * len(keys))})'
+            connection.executemany(sql, data_iter)
+
         df_filtered.to_sql(
             'player_stats_fbref',
             conn,
             if_exists='append',
             index=False,
             chunksize=1000,
-            # Use a custom method to handle INSERT OR REPLACE, which is more robust than simple append.
-            method=lambda table, connection, keys, data_iter: connection.executemany(
-                f'INSERT OR REPLACE INTO "{table.name}" ({",".join(f"`{k}`" for k in keys)}) VALUES ({",".join(["?"] * len(keys))})',
-                data_iter
-            )
+            method=insert_or_replace
         )
+        
         conn.commit()
     except Exception as e:
-        print(f"An error occurred during database population: {e}")
+        logging.error(f"An error occurred during database population: {e}")
         conn.rollback()
-            method=lambda table, connection, keys, data_iter: connection.executemany(
-                'INSERT OR REPLACE INTO "' + table.name + '" (' + ",".join(f"`{k}`" for k in keys) + ') VALUES (' + ",".join(["?"] * len(keys)) + ')',
-                data_iter
-            )
+        raise
+    finally:
         conn.close()
 
 def populate_teams_and_players(players_data, teams_data):
-    except Exception as e:
-        import logging
-        logging.error(f"An error occurred during database population: {e}")
-        conn.rollback()
+    """
     Populates the teams and players tables from the FPL player data, mapping to the new schema.
     """
     conn = get_db_connection()
