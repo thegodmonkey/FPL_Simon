@@ -31,7 +31,6 @@ defaults:
 
 permissions:
   contents: 'read'
-  id-token: 'write'
   issues: 'write'
   pull-requests: 'write'
   statuses: 'write'
@@ -74,28 +73,16 @@ jobs:
       )
     timeout-minutes: 5
     runs-on: 'ubuntu-latest'
-    env:
-      ACTIONS_STEP_DEBUG: true # Default to debug logging
-
     steps:
       - name: 'Checkout PR code'
-        uses: 'actions/checkout@v4'
-
-      - name: 'Generate GitHub App Token'
-        id: 'generate_token'
-        if: |-
-          ${{ vars.APP_ID }}
-        uses: 'actions/create-github-app-token@v2'
-        with:
-          app-id: '${{ vars.APP_ID }}'
-          private-key: '${{ secrets.APP_PRIVATE_KEY }}'
+        uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
 
       - name: 'Get PR details (pull_request & workflow_dispatch)'
         id: 'get_pr'
         if: |-
           ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
         env:
-          GITHUB_TOKEN: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
           EVENT_NAME: '${{ github.event_name }}'
           WORKFLOW_PR_NUMBER: '${{ github.event.inputs.pr_number }}'
           PULL_REQUEST_NUMBER: '${{ github.event.pull_request.number }}'
@@ -128,7 +115,7 @@ jobs:
         if: |-
           ${{ github.event_name == 'issue_comment' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment' }}
         env:
-          GITHUB_TOKEN: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
           COMMENT_BODY: '${{ github.event.comment.body || github.event.review.body }}'
           PR_NUMBER: '${{ github.event.issue.number || github.event.pull_request.number }}'
         run: |-
@@ -158,7 +145,7 @@ jobs:
         uses: 'google-github-actions/run-gemini-cli@v0'
         id: 'gemini_pr_review'
         env:
-          GITHUB_TOKEN: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
           PR_NUMBER: '${{ steps.get_pr.outputs.pr_number || steps.get_pr_comment.outputs.pr_number }}'
           PR_DATA: '${{ steps.get_pr.outputs.pr_data || steps.get_pr_comment.outputs.pr_data }}'
           CHANGED_FILES: '${{ steps.get_pr.outputs.changed_files || steps.get_pr_comment.outputs.changed_files }}'
@@ -168,7 +155,7 @@ jobs:
           gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
           settings: |-
             {
-              "debug": true,
+              "debug": ${{ fromJSON(env.DEBUG || env.ACTIONS_STEP_DEBUG || false) }},
               "maxSessionTurns": 20,
               "mcpServers": {
                 "github": {
@@ -205,7 +192,7 @@ jobs:
                 "target": "gcp"
               }
             }
-          prompt: |-
+          prompt: |
             ## Role
 
             You are an expert code reviewer. You have access to tools to gather
@@ -249,7 +236,13 @@ jobs:
                 Code suggestions in particular are very helpful so that the author can directly apply them
                 to their code, but they must be accurately anchored to the lines that should be replaced.
             5. Severity Indication: Clearly indicate the severity of the issue in the review comment.
-              This is very important to the author.
+              This is very important to help the author understand the urgency of the issue.
+              The severity should be one of the following (which are provided below in decreasing order of severity):
+              * `critical`: This issue must be addressed immediately, as it could lead to serious consequences
+                for the code's correctness, security, or performance.
+              * `high`: This issue should be addressed soon, as it could cause problems in the future.
+              * `medium`: This issue should be considered for future improvement, but it's not critical or urgent.
+              * `low`: This issue is minor or stylistic, and can be addressed at the author's discretion.
             6. Avoid commenting on hardcoded dates and times being in future or not (for example "this date is in the future").
               * Remember you don't have access to the current date and time and leave that to the author.
             7. Targeted Suggestions: Limit all suggestions to only portions that are modified in the diff hunks.
@@ -273,15 +266,15 @@ jobs:
                 Just make sure that the inline code comments add value, and are not just restating what the code does. Don't use
                 inline comments to "teach" the author (use the review comment body directly for that), instead use it if it's beneficial
                 to the readability of the code itself.
-            10. Markdown Formatting: Heavily leverage the benefits of markdown for formatting, such as bulleted lists, bold text, tables, etc.
-            11. Avoid mistaken review comments:
+            9. Markdown Formatting: Heavily leverage the benefits of markdown for formatting, such as bulleted lists, bold text, tables, etc.
+            10. Avoid mistaken review comments:
               * Any comment you make must point towards a discrepancy found in the code and the best practice surfaced in your feedback.
                 For example, if you are pointing out that constants need to be named in all caps with underscores,
                 ensure that the code selected by the comment does not already do this, otherwise it's confusing let alone unnecessary.
-            12. Remove Duplicated code suggestions:
+            11. Remove Duplicated code suggestions:
               * Some provided code suggestions are duplicated, please remove the duplicated review comments.
-            13. Don't Approve The Pull Request
-            14. Reference all shell variables as "${VAR}" (with quotes and braces)
+            12. Don't Approve The Pull Request
+            13. Reference all shell variables as "${VAR}" (with quotes and braces)
 
             ### Review Criteria (Prioritized in Review)
 
@@ -408,7 +401,7 @@ jobs:
                   - 🔴 for critical severity
                   - 🔵 if severity is unclear
 
-                  Including all of this, an example inline comment would be:
+                  Including all of a this, an example inline comment would be:
                   <COMMENT>
                   🟢 Use camelCase for function names
                   ```suggestion
@@ -446,9 +439,9 @@ jobs:
       - name: 'Post PR review failure comment'
         if: |-
           ${{ failure() && steps.gemini_pr_review.outcome == 'failure' }}
-        uses: 'actions/github-script@v6'
+        uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea'
         with:
-          github-token: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
+          github-token: '${{ secrets.GITHUB_TOKEN }}'
           script: |-
             github.rest.issues.createComment({
               owner: '${{ github.repository }}'.split('/')[0],
