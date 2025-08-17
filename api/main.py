@@ -30,7 +30,10 @@ def main():
         populate_fbref_stats(stats_df)
         logging.info("Database populated with FBref stats successfully.")
 
+    except (ConnectionError, KeyError) as e:
+        logging.error(f"A specific error occurred in the main process: {e}", exc_info=True)
     except Exception as e:
+        logging.error(f"An unexpected error occurred in the main process: {e}", exc_info=True)
         logging.error(f"An error occurred in the main process: {e}", exc_info=True)
 
 if __name__ == "__main__":
