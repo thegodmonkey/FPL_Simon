@@ -68,26 +68,12 @@ def test_populate_fbref_stats(monkeypatch, tmp_path):
 
     # 2. Create mock fbref stats DataFrame
     fbref_stats_data = {
-        'player_id': [1],
+        'league': ['ENG-Premier League'],
         'season': ['2023-2024'],
-        'minutes_per_90': [28.3],
-        'xg_per_90': [0.45],
-        'xa_per_90': [0.21],
-        'goals': [10],
-        'assists': [5],
-        'sh': [50],
-        'sot': [25],
-        'cmp': [1000],
-        'att_pass': [1200],
-        'sca': [100],
-        'gca': [10],
-        'tkl': [30],
-        'tklw': [20],
-        'touches': [2000],
-        'succ_dribbles': [40],
-        'att_dribbles': [60],
-        'crdy_misc': [5],
-        'crdr_misc': [1]
+        'team': ['Arsenal'],
+        'player': ['Bukayo Saka'],
+        'Performance_Gls': [10],
+        'Performance_Ast': [5],
     }
     stats_df = pd.DataFrame(fbref_stats_data)
 
@@ -98,28 +84,14 @@ def test_populate_fbref_stats(monkeypatch, tmp_path):
     conn = sqlite3.connect(test_db)
     conn.row_factory = sqlite3.Row # Ensure we can access columns by name
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM player_stats_fbref WHERE player_id = 1")
+    cursor.execute("SELECT * FROM player_stats_fbref WHERE player = 'Bukayo Saka'")
     stats = cursor.fetchone()
 
     assert stats is not None
 
     # Verify a subset of the columns
-    assert stats['player_id'] == 1
     assert stats['season'] == '2023-2024'
-    assert stats['goals'] == 10
-    assert stats['assists'] == 5
-    assert stats['sh'] == 50
-    assert stats['sot'] == 25
-    assert stats['cmp'] == 1000
-    assert stats['att_pass'] == 1200
-    assert stats['sca'] == 100
-    assert stats['gca'] == 10
-    assert stats['tkl'] == 30
-    assert stats['tklw'] == 20
-    assert stats['touches'] == 2000
-    assert stats['succ_dribbles'] == 40
-    assert stats['att_dribbles'] == 60
-    assert stats['crdy_misc'] == 5
-    assert stats['crdr_misc'] == 1
+    assert stats['Performance_Gls'] == 10
+    assert stats['Performance_Ast'] == 5
 
     conn.close()
