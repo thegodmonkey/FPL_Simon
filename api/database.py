@@ -149,3 +149,26 @@ def populate_teams_and_players(players_data, teams_data):
         )
 
         conn.commit()
+
+def get_player_data(player_id: int) -> pd.DataFrame:
+    """
+    Retrieves all data for a specific player from the database.
+
+    Args:
+        player_id: The ID of the player to retrieve data for.
+
+    Returns:
+        A pandas DataFrame containing the player's data.
+    """
+    with get_db_connection() as conn:
+        # This query joins the players table with their stats, filtering by player_id.
+        # It uses a subquery to get the player's full name from their ID,
+        # then joins with the stats table on that name.
+        query = """
+            SELECT p.*, s.*
+            FROM players p
+            LEFT JOIN player_stats_fbref s ON p.full_name = s.player
+            WHERE p.player_id = ?
+        """
+        df = pd.read_sql_query(query, conn, params=(player_id,))
+    return df
