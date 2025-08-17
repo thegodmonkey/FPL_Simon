@@ -4,3 +4,5 @@ pandas
 requests
 soccerdata
 google-generativeai
+arize-phoenix
+openinference-instrumentation-openai
