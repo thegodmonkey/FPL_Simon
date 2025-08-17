@@ -1,27 +1,40 @@
-from database import init_db, populate_teams_and_players, populate_fbref_stats
+import logging
+from database import create_database_tables, populate_teams_and_players, populate_fbref_stats
 from data_fetcher import get_fpl_data, get_fbref_stats
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def main():
     """
     Main function to initialize the database and populate it with FPL and FBref data.
     """
-    print("Initializing the database...")
-    init_db()
-    print("Database initialized.")
+    try:
+        logging.info("Initializing the database...")
+        create_database_tables()
+        logging.info("Database initialized.")
 
-    print("Fetching FPL data...")
-    players_data, teams_data = get_fpl_data()
-    print("FPL data fetched.")
+        logging.info("Fetching FPL data...")
+        players_data, teams_data = get_fpl_data()
+        logging.info("FPL data fetched.")
 
-    season = "2024-2025" # Or get from config/args
-    print(f"Fetching FBref stats data for the {season} season...")
-    stats_df = get_fb_ref_stats(season=season)
-    populate_teams_and_players(players_data, teams_data)
-    print("Database populated with FPL data successfully.")
+        season = "2024-2025"  # This could be parameterized or moved to a config file.
+        logging.info(f"Fetching FBref stats data for the {season} season...")
+        stats_df = get_fbref_stats(season=season)
 
-    print("Populating the database with FBref stats data...")
-    populate_fbref_stats(stats_df)
-    print("Database populated with FBref stats successfully.")
+        logging.info("Populating the database with FPL teams and players data...")
+        populate_teams_and_players(players_data, teams_data)
+        logging.info("Database populated with FPL data successfully.")
+
+        logging.info("Populating the database with FBref stats data...")
+        populate_fbref_stats(stats_df)
+        logging.info("Database populated with FBref stats successfully.")
+
+    except (ConnectionError, KeyError) as e:
+        logging.error(f"A specific error occurred in the main process: {e}", exc_info=True)
+    except Exception as e:
+        logging.error(f"An unexpected error occurred in the main process: {e}", exc_info=True)
+        logging.error(f"An error occurred in the main process: {e}", exc_info=True)
 
 if __name__ == "__main__":
     main()
