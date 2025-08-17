@@ -1,5 +1,6 @@
 from flask import Flask, jsonify
 from .database import get_db_connection
+from .analysis import get_llm_insight
 
 app = Flask(__name__)
 
@@ -30,6 +31,12 @@ def get_player_stats(player_id):
     finally:
         if conn:
             conn.close()
+
+@app.route('/api/players/<int:player_id>/insight')
+def get_player_insight(player_id):
+    insight = get_llm_insight(prompt=str(player_id), context=str(player_id))
+    return jsonify({"insight": insight})
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True, use_reloader=False)

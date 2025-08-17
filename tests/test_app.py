@@ -72,3 +72,20 @@ def test_get_player_stats(client, mocker):
     # Then
     assert response.status_code == 200
     assert len(response.json) == len(mock_stats_data)
+
+
+def test_get_player_insight(client, mocker):
+    """
+    Tests the /api/players/<player_id>/insight endpoint.
+    """
+    # Given
+    player_id = 1
+    mock_insight = "This is a mock insight."
+    mocker.patch('api.app.get_llm_insight', return_value=mock_insight)
+
+    # When
+    response = client.get(f'/api/players/{player_id}/insight')
+
+    # Then
+    assert response.status_code == 200
+    assert response.json == {"insight": mock_insight}
