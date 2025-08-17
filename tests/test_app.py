@@ -72,3 +72,48 @@ def test_get_player_stats(client, mocker):
     # Then
     assert response.status_code == 200
     assert len(response.json) == len(mock_stats_data)
+
+
+def test_get_player_insight(client, mocker):
+    """
+    Tests the /api/players/<player_id>/insight endpoint.
+    """
+    # Given
+    player_id = 1
+    player_name = "Test Player"
+    team_name = "Test Team"
+
+    mock_player_data = {'player_id': player_id, 'full_name': player_name, 'position': 'FWD', 'team_id': 1}
+    mock_team_data = {'team_name': team_name}
+    mock_stats_data = [{'stat_id': 1, 'player': player_name, 'Performance_Gls': 10}]
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+
+    # Mock database calls to return dicts directly for simplicity
+    mock_cursor.fetchone.side_effect = [mock_player_data, mock_team_data]
+    mock_cursor.fetchall.return_value = mock_stats_data
+    mock_conn.cursor.return_value = mock_cursor
+    mock_conn.__enter__.return_value = mock_conn
+    mock_conn.__exit__.return_value = None
+    mocker.patch('api.app.get_db_connection', return_value=mock_conn)
+
+    # Mock LLM call
+    mock_insight = "This is a mock insight."
+    mock_get_llm_insight = mocker.patch('api.app.get_llm_insight', return_value=mock_insight)
+
+    # When
+    response = client.get(f'/api/players/{player_id}/insight')
+
+    # Then
+    assert response.status_code == 200
+    assert response.json == {"insight": mock_insight}
+
+    # Verify that get_llm_insight was called correctly
+    mock_get_llm_insight.assert_called_once()
+    args, kwargs = mock_get_llm_insight.call_args
+
+    assert kwargs['prompt'] == "show me the player name, team and key stats based on the information provided"
+    assert player_name in kwargs['context']
+    assert team_name in kwargs['context']
+    assert str(mock_stats_data) in kwargs['context']
