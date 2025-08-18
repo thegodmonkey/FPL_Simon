@@ -1,7 +1,34 @@
 import React, { useState, useEffect } from 'react';
 
 const PlayerList = () => {
+const PlayerList = () => {
   const [players, setPlayers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/players')
+      .then(response => response.json())
+      .then(data => {
+        setPlayers(data);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <div>
+      <h1>Player List</h1>
+      <ul>
+        {players.map(player => (
+          <li key={player.id}>{player.name}</li>
+        ))}
+      </ul>
+    </div>
+  );
+};
 
   useEffect(() => {
     fetch('/api/players')
