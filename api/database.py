@@ -38,7 +38,8 @@ def create_database_tables():
         # Create player_stats_fbref table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS player_stats_fbref (
-                league TEXT, season TEXT, team TEXT, player TEXT, nation TEXT, pos TEXT, age REAL, born REAL,
+                player_id INTEGER,
+                league TEXT, season TEXT, team TEXT, nation TEXT, pos TEXT, age REAL, born REAL,
                 "Playing Time_MP" REAL, "Playing Time_Starts" REAL, "Playing Time_Min" REAL, "Playing Time_90s" REAL,
                 "Performance_Gls" REAL, "Performance_Ast" REAL, "Performance_G+A" REAL, "Performance_G-PK" REAL,
                 "Performance_PK" REAL, "Performance_PKatt" REAL, "Performance_CrdY" REAL, "Performance_CrdR" REAL,
@@ -48,7 +49,8 @@ def create_database_tables():
                 "Per 90 Minutes_G-PK" REAL, "Per 90 Minutes_G+A-PK" REAL, "Per 90 Minutes_xG" REAL,
                 "Per 90 Minutes_xAG" REAL, "Per 90 Minutes_xG+xAG" REAL, "Per 90 Minutes_npxG" REAL,
                 "Per 90 Minutes_npxG+xAG" REAL,
-                PRIMARY KEY (league, season, team, player)
+                PRIMARY KEY (player_id, league, season, team),
+                FOREIGN KEY (player_id) REFERENCES players (player_id)
             )
         ''')
 
@@ -57,37 +59,48 @@ def create_database_tables():
 def populate_fbref_stats(stats_dataframe: pd.DataFrame):
     """
     Populates the player_stats_fbref table from a DataFrame.
-
-    This function handles the transformation of a multi-indexed DataFrame from soccerdata
-    into a format suitable for our SQLite database.
+    This function maps player names to IDs, unnests the multi-level column index,
+    and inserts the data into the database.
     """
-    # The soccerdata library returns a DataFrame with a multi-level index (e.g., ('league', ''), ('season', '')).
-    # We reset the index to convert the indexed fields ('league', 'season', 'team', 'player') into regular columns.
-    stats_dataframe.reset_index(inplace=True)
+    with get_db_connection() as conn:
+        # Step 1: Create a mapping from full_name to player_id from the players table.
+        players_map_df = pd.read_sql_query("SELECT player_id, full_name FROM players", conn)
+        player_name_to_id = players_map_df.set_index('full_name')['player_id'].to_dict()
 
-    # The column headers are also a MultiIndex, e.g., ('Performance', 'Gls').
-    # We flatten this into a single-level index by joining the levels with an underscore,
-    # resulting in a column name like 'Performance_Gls'.
+    # Step 2: Prepare the stats DataFrame
+    # Reset the index to turn 'league', 'season', 'team', 'player' from index to columns.
+    stats_dataframe.reset_index(inplace=True)
+    # Flatten the MultiIndex columns (e.g., ('Performance', 'Gls') -> 'Performance_Gls').
     if isinstance(stats_dataframe.columns, pd.MultiIndex):
         stats_dataframe.columns = ['_'.join(col).strip('_') for col in stats_dataframe.columns.values]
 
+    # Step 3: Map player names to player_id.
+    stats_dataframe['player_id'] = stats_dataframe['player'].map(player_name_to_id)
+
+    # Log and remove rows where the player name couldn't be mapped to an ID.
+    unmapped_players = stats_dataframe[stats_dataframe['player_id'].isnull()]
+    if not unmapped_players.empty:
+        logging.warning(f"Could not find player_id for the following players: {unmapped_players['player'].unique().tolist()}")
+    stats_dataframe.dropna(subset=['player_id'], inplace=True)
+    stats_dataframe['player_id'] = stats_dataframe['player_id'].astype(int)
+
+    # Step 4: Filter DataFrame to only include columns that exist in the database table.
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        # To prevent errors from schema mismatches, we fetch the actual column names from the database table.
         cursor.execute("PRAGMA table_info(player_stats_fbref)")
         table_columns = {info[1] for info in cursor.fetchall()}
 
-        # We then filter the DataFrame, keeping only the columns that exist in the target table.
-        # This makes the function more robust against changes in the data source.
-        df_filtered = stats_dataframe[[col for col in stats_dataframe.columns if col in table_columns]]
+    # We no longer need the 'player' name column for insertion.
+    if 'player' in stats_dataframe.columns:
+        stats_dataframe.drop(columns=['player'], inplace=True)
 
-        # A transaction is used to ensure the integrity of the data.
-        # The whole operation will be rolled back if any part of it fails.
+    df_filtered = stats_dataframe[[col for col in stats_dataframe.columns if col in table_columns]]
+
+    # Step 5: Insert data into the database.
+    with get_db_connection() as conn:
         try:
-            # The `to_sql` method from pandas is used for bulk insertion.
-            # We define a custom `insert_or_replace` method to handle cases where a player's stats
-            # for a given season already exist in the table. The PRIMARY KEY on (league, season, team, player)
-            # ensures uniqueness.
+            # Use a custom method for 'INSERT OR REPLACE' functionality with pandas `to_sql`.
+            # The PRIMARY KEY on (player_id, league, season, team) ensures uniqueness.
             def insert_or_replace(table, connection, keys, data_iter):
                 sql = f'INSERT OR REPLACE INTO "{table.name}" ({",".join(f"`{k}`" for k in keys)}) VALUES ({",".join(["?"] * len(keys))})'
                 connection.executemany(sql, data_iter)
@@ -95,12 +108,11 @@ def populate_fbref_stats(stats_dataframe: pd.DataFrame):
             df_filtered.to_sql(
                 'player_stats_fbref',
                 conn,
-                if_exists='append',  # Use 'append' with our custom method to get insert-or-replace behavior.
+                if_exists='append',
                 index=False,
-                chunksize=1000,      # Process the data in chunks to manage memory usage.
+                chunksize=1000,
                 method=insert_or_replace
             )
-
             conn.commit()
         except Exception as e:
             logging.error(f"An error occurred during database population: {e}")
@@ -165,9 +177,9 @@ def get_player_data(player_id: int) -> pd.DataFrame:
         # It uses a subquery to get the player's full name from their ID,
         # then joins with the stats table on that name.
         query = """
-            SELECT p.*, s.*
+            SELECT *
             FROM players p
-            LEFT JOIN player_stats_fbref s ON p.full_name = s.player
+            LEFT JOIN player_stats_fbref s USING(player_id)
             WHERE p.player_id = ?
         """
         df = pd.read_sql_query(query, conn, params=(player_id,))
