@@ -6,3 +6,7 @@ soccerdata
 google-generativeai
 arize-phoenix
 openinference-instrumentation-openai
+langchain
+langgraph
+langchain-google-genai
+apify-client
